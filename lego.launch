@@ -1,0 +1,42 @@
+<launch>
+    
+    <!--- Sim Time -->
+    <param name="/use_sim_time" value="true" />
+
+<!--Relay front and back PCL to a common "fused" point cloud -->
+	<node pkg="topic_tools" type="relay" name="relay_front" args="front_lslidar_point_cloud lslidar_pointcloud" output="screen"/>
+	<node pkg="topic_tools" type="relay" name="relay_back" args="back_lslidar_point_cloud lslidar_pointcloud" output="screen"/>
+
+   
+
+  
+
+    <!--- TF -->
+    <node pkg="tf" type="static_transform_publisher" name="camera_init_to_map"  args="0 0 0 0 0 0 /map    /camera_init 10" />
+    <node pkg="tf" type="static_transform_publisher" name="base_link_to_camera" args="0 0 0 0 0 0        /laser_odom /bobcat_base   10" />
+
+    <!--- LeGO-LOAM -->    
+    <arg name="rosbag"  default=""/>
+    <arg name="lidar_topic" default="/front_lslidar_point_cloud"/>
+
+    <node pkg="floam" type="floam_laser_mapping_node" name="floam_laser_mapping_node" output="screen"/>
+
+   
+    
+  	<node pkg="hector_trajectory_server" type="hector_trajectory_server" name="trajectory_server_loam" ns="gt" >
+       
+
+        <param name="/target_frame_name" value="map" />
+       <param name="/source_frame_name" value="$(arg lidar_topic)" />
+        <param name="/trajectory_update_rate" value="10.0" />
+        <param name="/trajectory_publish_rate" value="10.0" />
+    </node>
+
+    <node pkg="lego_loam_bor" type="lego_loam_bor"    name="lego_loam_bor"    output="screen" >
+       <remap from="/lidar_points" to="$(arg lidar_topic)"/>
+        <param name="rosbag"      value="$(arg rosbag)" type="string" />
+       <remap from="/velodyne_points_filtered" to="$(arg lidar_topic)"/>
+       <param name="lidar_topic" value="$(arg lidar_topic)" type="string" />
+    </node>
+
+</launch>
